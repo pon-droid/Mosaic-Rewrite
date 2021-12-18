@@ -25,11 +25,18 @@ type fRGB struct {
 	dist float64
 }
 
+type magical struct {
+	image *imagick.MagickWand
+	order int
+}
+
 type src_list []fRGB
 
+type magick_list []magical
+
 const (
-	tile_size uint = 50
-	out_size  uint = 250
+	tile_size uint = 25
+	out_size  uint = 175
 )
 
 var (
@@ -147,7 +154,7 @@ func main() {
 
 	}
 
-	sort_diff()
+	sort_man()
 
 }
 
@@ -165,6 +172,110 @@ func (e src_list) Len() int { return len(e) }
 func (e src_list) Less(i, j int) bool { return e[i].dist < e[j].dist }
 
 func (e src_list) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+
+func (e magick_list) Len() int { return len(e) }
+
+func (e magick_list) Less(i, j int) bool { return e[i].order < e[j].order }
+
+func (e magick_list) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+
+func sort_man() {
+	fmt.Println("Sorting...")
+
+	mw := imagick.NewMagickWand()
+
+	sum := (len(out) / 5)
+	var channels []chan magical
+	buffer := []magical{}
+
+	/*
+		output1 := make(chan magical)
+		output2 := make(chan magical)
+		output3 := make(chan magical)
+		output4 := make(chan magical)
+		output5 := make(chan magical)
+
+		go sort_iter(sum*4, sum*(4+1), output5, 5)
+		go sort_iter(sum*3, sum*(3+1), output4, 4)
+		go sort_iter(sum*2, sum*(2+1), output3, 3)
+		go sort_iter(sum*1, sum*(1+1), output2, 2)
+		go sort_iter(sum*0, sum*(0+1), output1, 1)
+
+		buffer := []magical{}
+
+		for i := 0; i < 5; i++ {
+			select {
+			case t1 := <-output1:
+				buffer = append(buffer, t1)
+			case t2 := <-output2:
+				buffer = append(buffer, t2)
+			case t3 := <-output3:
+				buffer = append(buffer, t3)
+			case t4 := <-output4:
+				buffer = append(buffer, t4)
+			case t5 := <-output5:
+				buffer = append(buffer, t5)
+			}
+		}*/
+
+	for i := 0; i < 5; i++ {
+		output := make(chan magical)
+		channels = append(channels, output)
+		go sort_iter(sum*i, sum*(i+1), output, i)
+	}
+
+	for i := 0; i < 5; i++ {
+		temp := <-channels[i]
+
+		buffer = append(buffer, temp)
+
+	}
+
+	sort.Sort(magick_list(buffer))
+
+	for i := 0; i < 5; i++ {
+		mw.AddImage(buffer[i].image)
+		defer buffer[i].image.Destroy()
+	}
+
+	/*
+		for i := 0; i < 5; i++ {
+			temp := sort_iter(sum*i, sum*(i+1))
+			mw.AddImage(temp)
+			defer temp.Destroy()
+		}
+	*/
+	fmt.Println("Writing...")
+	end := imagick.NewDrawingWand()
+	total_di := fmt.Sprintf("%vx%v+0+0", out_size, out_size)
+	tile_di := fmt.Sprintf("%vx%v+0+0", tile_size, tile_size)
+	fmt.Println(total_di)
+	fmt.Println(tile_di)
+	montage := mw.MontageImage(end, total_di, tile_di, imagick.MONTAGE_MODE_CONCATENATE, "0x0+0+0")
+
+	montage.WriteImage("go_manager.jpg")
+}
+
+func sort_iter(start int, end int, ch chan magical, num int) {
+	mw := imagick.NewMagickWand()
+	var temp_src []fRGB
+	for i := range src {
+		temp_src = append(temp_src, src[i])
+	}
+	for i := start; i < end; i++ {
+		for j := range temp_src {
+			temp_src[j].dist = calc_colour_diff(temp_src[j].R, temp_src[j].G, temp_src[j].B, out[i].R, out[i].G, out[i].B)
+		}
+		sort.Sort(src_list(temp_src))
+
+		temp := imagick.NewMagickWand()
+		temp.ReadImage(temp_src[0].file)
+		temp.ResizeImage(tile_size, tile_size, imagick.FILTER_LANCZOS)
+		mw.AddImage(temp)
+		defer temp.Destroy()
+	}
+	ch <- magical{mw, num}
+}
 
 func sort_diff() {
 	fmt.Println("Sorting...")
