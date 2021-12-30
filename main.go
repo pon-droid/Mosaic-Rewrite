@@ -36,7 +36,7 @@ type magick_list []magical
 
 const (
 	tile_size uint = 25
-	out_size  uint = 175
+	out_size  uint = 150
 )
 
 var (
@@ -183,48 +183,21 @@ func sort_man() {
 	fmt.Println("Sorting...")
 
 	mw := imagick.NewMagickWand()
-
-	sum := (len(out) / 5)
+	con_num := 1000
+	sum := (len(out) / con_num)
 	var channels []chan magical
 	buffer := []magical{}
 
-	/*
-		output1 := make(chan magical)
-		output2 := make(chan magical)
-		output3 := make(chan magical)
-		output4 := make(chan magical)
-		output5 := make(chan magical)
-
-		go sort_iter(sum*4, sum*(4+1), output5, 5)
-		go sort_iter(sum*3, sum*(3+1), output4, 4)
-		go sort_iter(sum*2, sum*(2+1), output3, 3)
-		go sort_iter(sum*1, sum*(1+1), output2, 2)
-		go sort_iter(sum*0, sum*(0+1), output1, 1)
-
-		buffer := []magical{}
-
-		for i := 0; i < 5; i++ {
-			select {
-			case t1 := <-output1:
-				buffer = append(buffer, t1)
-			case t2 := <-output2:
-				buffer = append(buffer, t2)
-			case t3 := <-output3:
-				buffer = append(buffer, t3)
-			case t4 := <-output4:
-				buffer = append(buffer, t4)
-			case t5 := <-output5:
-				buffer = append(buffer, t5)
-			}
-		}*/
-
-	for i := 0; i < 5; i++ {
+	for i := 0; i < con_num; i++ {
+		fmt.Println(i)
+		fmt.Println("Thread started")
 		output := make(chan magical)
 		channels = append(channels, output)
 		go sort_iter(sum*i, sum*(i+1), output, i)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < con_num; i++ {
+
 		temp := <-channels[i]
 
 		buffer = append(buffer, temp)
@@ -233,7 +206,7 @@ func sort_man() {
 
 	sort.Sort(magick_list(buffer))
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < con_num; i++ {
 		mw.AddImage(buffer[i].image)
 		defer buffer[i].image.Destroy()
 	}
@@ -253,7 +226,7 @@ func sort_man() {
 	fmt.Println(tile_di)
 	montage := mw.MontageImage(end, total_di, tile_di, imagick.MONTAGE_MODE_CONCATENATE, "0x0+0+0")
 
-	montage.WriteImage("go_manager.jpg")
+	montage.WriteImage("this_bloke.jpg")
 }
 
 func sort_iter(start int, end int, ch chan magical, num int) {
@@ -305,7 +278,7 @@ func sort_diff() {
 
 	montage := mw.MontageImage(end, total_di, tile_di, imagick.MONTAGE_MODE_CONCATENATE, "0x0+0+0")
 	fmt.Println(len(src))
-	montage.WriteImage("bigger8.png")
+	montage.WriteImage("which.jpg")
 
 }
 
